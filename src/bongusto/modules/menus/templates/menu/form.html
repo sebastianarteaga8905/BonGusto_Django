@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ accion }} Menu{% endblock %}
+
+{% block content %}
+
+<!-- Titulo principal de la vista | Muestra si se esta creando, editando o viendo -->
+<h4 class="text-center mb-4">
+  <strong>{{ accion }} Menu</strong>
+</h4>
+
+<!-- Contenedor principal del formulario | Aqui vive toda la tarjeta del menu -->
+<div class="menu-form-wrapper">
+
+  <!-- Formulario principal | Se usa tanto para crear como para actualizar -->
+  <!-- Estas propiedades sirven para mostrar confirmacion antes de guardar -->
+  <form
+    action="{% if menu.id_menu %}/menus/{{ menu.id_menu }}/update{% else %}/menus/store{% endif %}"
+    method="post"
+    class="modern-form"
+    {% if not readonly %}
+    data-confirm-title="{% if menu.id_menu %}Confirmar actualizacion{% else %}Confirmar creacion{% endif %}"
+    data-confirm-text="{% if menu.id_menu %}Seguro que deseas guardar los cambios de este menu?{% else %}Seguro que deseas crear este item del menu?{% endif %}"
+    data-confirm-button="{% if menu.id_menu %}Si, actualizar{% else %}Si, crear{% endif %}"
+    {% endif %}
+  >
+
+    <!-- Token de seguridad de Django (obligatorio en formularios POST) -->
+    {% csrf_token %}
+
+    <!-- Campo nombre del menu -->
+    <div class="mb-3">
+      <label class="form-label">Item *</label>
+
+      <!-- Input principal | Aqui se escribe el nombre del producto/menu -->
+     
+      <!-- Si es modo solo lectura, se bloquea el input -->
+      <input
+        type="text"
+        name="nombre_menu"
+        maxlength="300"
+        class="form-control"
+        placeholder="Ej: Pizza Margarita"
+        value="{{ menu.nombre_menu|default:'' }}"
+        {% if readonly %}disabled{% else %}required{% endif %}
+      >
+    </div>
+
+    <!-- Campo descripcion -->
+    <div class="mb-3">
+      <label class="form-label">Descripcion</label>
+
+      <!-- Textarea opcional | Aqui se describe el menu -->
+      <textarea
+        name="descripcion_menu"
+        rows="4"
+        maxlength="300"
+        class="form-control"
+        placeholder="Descripcion del menu (opcional)"
+        {% if readonly %}disabled{% endif %}
+      >{{ menu.descripcion_menu|default:'' }}</textarea>
+    </div>
+    <!-- Zona de botones -->
+    <div class="d-flex gap-2">
+      <!-- Boton guardar | Solo aparece si se puede editar -->
+      {% if not readonly %}
+      <button type="submit" class="btn btn-success">
+        <i class="fa fa-save"></i> Guardar
+      </button>
+      {% endif %}
+      <!-- Boton cancelar o volver -->
+      <a href="/menus" class="btn btn-secondary">
+        <i class="fa fa-times"></i>
+        <!-- Cambia el texto segun el modo -->
+        {% if readonly %}Volver{% else %}Cancelar{% endif %}
+      </a>
+
+      <!-- Boton editar | Solo aparece cuando esta en modo ver -->
+      {% if readonly %}
+      <a href="/menus/{{ menu.id_menu }}/edit" class="btn btn-primary">Editar</a>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}

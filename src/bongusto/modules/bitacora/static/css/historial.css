@@ -1,0 +1,349 @@
+/* Estilos del módulo bitácora */
+/* Aquí se maneja todo lo visual del historial de movimientos del sistema */
+/* Estilo general de la página */
+body {
+    background: #fafbfc;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Contenedor principal */
+/* Se divide en sidebar + contenido */
+.main-container {
+    display: flex;
+    min-height: 100vh; /* ocupa toda la altura de la pantalla */
+}
+
+/* Zona principal donde va el contenido */
+.content {
+    flex: 1; /* toma todo el espacio disponible */
+    padding: 40px 60px;
+}
+
+
+/* ---------- TABLA ---------- */
+
+/* Caja que contiene la tabla */
+.table-responsive {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-top: 20px;
+}
+
+/* Estilo base de la tabla */
+.table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Encabezados de la tabla */
+.table thead th {
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+
+    /* Se muestran en mayúsculas */
+    text-transform: uppercase;
+
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    padding: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Celdas de la tabla */
+.table tbody td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Quita el borde de la última fila */
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Efecto hover en filas */
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+
+/* ---------- FILTROS ---------- */
+
+/* Contenedor de filtros */
+.row {
+    display: flex;
+    flex-wrap: wrap; /* permite que bajen en responsive */
+    gap: 15px;
+}
+
+/* Columnas de filtros */
+.col-md-4 {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Inputs de filtros */
+.form-control {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+}
+
+/* Botones base */
+.btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+/* Botón azul principal */
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Botón verde de acción */
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Márgenes reutilizables */
+.mb-3 {
+    margin-bottom: 1rem;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem;
+}
+
+/* Títulos */
+h4 {
+    color: #333;
+    font-weight: 600;
+}
+
+
+/* ---------- BITÁCORA (ESTILO PRO) ---------- */
+
+/* Card superior de resumen */
+.bitacora-summary-card {
+    background: #ffffff;
+    border: 1px solid #ece7e3;
+    border-radius: 28px;
+    box-shadow: 0 20px 40px rgba(24, 24, 24, 0.06);
+    padding: 28px 32px;
+    margin-bottom: 28px;
+}
+
+/* Texto pequeño tipo etiqueta */
+.bitacora-summary-label {
+    display: inline-block;
+    color: #b22222;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+/* Título principal */
+.bitacora-summary-title {
+    color: #181818;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 10px;
+}
+
+/* Texto descriptivo debajo del título */
+.bitacora-summary-text {
+    color: #6f6c73;
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 760px;
+}
+
+
+/* Contenedor general de la línea de tiempo */
+.bitacora-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Agrupación por día */
+.bitacora-day-group {
+    background: #ffffff;
+    border: 1px solid #ece7e3;
+    border-radius: 28px;
+    box-shadow: 0 18px 38px rgba(24, 24, 24, 0.06);
+    padding: 24px;
+}
+
+/* Encabezado de cada día */
+.bitacora-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #f0ebea;
+}
+
+/* Título del día */
+.bitacora-day-title {
+    color: #181818;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Fecha del grupo */
+.bitacora-day-date {
+    color: #7a7780;
+    font-size: 0.95rem;
+    margin: 6px 0 0;
+}
+
+/* Número de registros del día */
+.bitacora-day-count {
+    background: #f7f3f1;
+    border: 1px solid #eadfda;
+    border-radius: 999px;
+    color: #7f2e22;
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+
+
+/* Lista de movimientos del día */
+.bitacora-day-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Card individual de cada movimiento */
+.bitacora-entry-card {
+    display: grid;
+
+    /* Distribución: hora | info | acciones */
+    grid-template-columns: 92px 1fr auto;
+
+    gap: 18px;
+    align-items: flex-start;
+
+    background: #fcfbfb;
+    border: 1px solid #efe9e5;
+    border-radius: 22px;
+    padding: 18px;
+}
+
+/* Hora destacada */
+.bitacora-entry-time {
+    color: #b22222;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+
+    background: #fff5f3;
+    border-radius: 16px;
+    padding: 16px 12px;
+}
+
+/* Parte superior del registro (usuario + id) */
+.bitacora-entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+/* Nombre del usuario */
+.bitacora-entry-user {
+    color: #181818;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* ID del registro */
+.bitacora-entry-id {
+    color: #8a868f;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Descripción de la acción */
+.bitacora-entry-action {
+    color: #5f5b63;
+    font-size: 0.98rem;
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* Contenedor de acciones (botones) */
+.bitacora-entry-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Estado vacío (cuando no hay registros) */
+.bitacora-empty-state {
+    background: #ffffff;
+    border: 1px dashed #d9cfca;
+    border-radius: 24px;
+    color: #6f6c73;
+    padding: 32px;
+    text-align: center;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+
+    /* Reduce padding en móviles */
+    .bitacora-summary-card,
+    .bitacora-day-group {
+        padding: 20px;
+    }
+
+    /* Todo pasa a estructura vertical */
+    .bitacora-day-header,
+    .bitacora-entry-top,
+    .bitacora-entry-card {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bitacora-entry-card {
+        gap: 14px;
+    }
+
+    /* Hora alineada a la izquierda */
+    .bitacora-entry-time {
+        text-align: left;
+        width: fit-content;
+    }
+
+    /* Botones alineados a la izquierda */
+    .bitacora-entry-actions {
+        justify-content: flex-start;
+    }
+}

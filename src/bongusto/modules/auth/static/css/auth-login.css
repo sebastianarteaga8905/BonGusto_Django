@@ -1,0 +1,338 @@
+/* Hoja de estilos auth-login.css del módulo auth */
+/* Aquí se maneja toda la parte visual del login con un estilo más moderno y limpio */
+/* Reinicio general para evitar diferencias raras entre navegadores */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+/* Estilos generales de la página */
+body {
+    font-family: "Manrope", system-ui, sans-serif;
+    background: #f2f1f4;
+    color: #181818;
+}
+/* Estructura principal del login, separada en dos bloques */
+.auth-row {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr; /* lado izquierdo visual, lado derecho formulario */
+    padding: 18px;
+    gap: 18px;
+}
+
+/* Contenedores principales de la vista */
+.auth-image-section,
+.auth-form-section {
+    border-radius: 34px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.72); /* da un efecto translúcido */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    box-shadow: 0 24px 40px rgba(24, 24, 24, 0.08);
+}
+
+/* Sección visual del lado izquierdo */
+.auth-image-section {
+    position: relative;
+
+    /* Fondo de imagen con una capa degradada encima */
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.24) 100%),
+        url("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80");
+
+    background-size: cover;
+    background-position: center;
+}
+
+/* Capa superior donde va el contenido visual del branding */
+.auth-image-overlay {
+    position: absolute;
+    inset: 0;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    color: white;
+}
+
+/* Logo principal mostrado en la parte visual */
+.auth-image-logo {
+    width: 124px;
+    height: 124px;
+    display: block;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 28px;
+
+    /* Ayuda a que el logo se integre mejor con la imagen de fondo */
+    mix-blend-mode: screen;
+}
+
+/* Marca pequeña tipo distintivo */
+.auth-brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,0.82);
+    color: #181818;
+    font-weight: 800;
+    margin-bottom: 18px;
+}
+
+/* Texto pequeño decorativo del branding */
+.auth-kicker {
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: rgba(255,255,255,0.86);
+}
+
+/* Título principal del bloque visual */
+.auth-brand-copy h1 {
+    font-size: clamp(2.6rem, 4vw, 4rem);
+    line-height: 0.98;
+    font-weight: 800;
+    margin-bottom: 14px;
+    letter-spacing: -0.04em;
+}
+
+/* Texto de apoyo o descripción */
+.auth-brand-copy p {
+    max-width: 520px;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.84);
+}
+
+/* Zona donde se acomoda el formulario */
+.auth-form-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+}
+
+/* Tarjeta interna que contiene el formulario */
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 10px;
+}
+
+/* Etiqueta pequeña superior */
+.mini-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: white;
+    border: 1px solid #e8e6eb;
+    color: #181818;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* Título principal del formulario */
+.auth-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 16px;
+}
+
+/* Texto secundario debajo del título */
+.auth-subcopy {
+    color: #66656d;
+    font-size: 0.96rem;
+    line-height: 1.6;
+    margin-bottom: 1.4rem;
+}
+
+/* Caja de mensaje de error */
+.auth-error {
+    color: #9f1730;
+    background: #ffecee;
+    border: 1px solid #ffd9dd;
+    padding: 12px 14px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+}
+
+/* Grupo general de cada campo del formulario */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+/* Texto de cada label */
+.form-group label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #404048;
+}
+
+/* Estilo base de los inputs */
+.form-group input {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border-radius: 16px;
+    border: 1px solid #e8e6eb;
+    background: rgba(255,255,255,0.96);
+    font-size: 0.96rem;
+    outline: none;
+
+    /* Transición suave para que el cambio no se vea brusco */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Efecto visual cuando el input recibe foco */
+.form-group input:focus {
+    border-color: #d90416;
+    box-shadow: 0 0 0 4px rgba(217, 4, 22, 0.08);
+}
+
+/* Contenedor especial del campo de contraseña */
+.password-field {
+    position: relative;
+}
+
+/* Espacio interno a la derecha para ubicar el botón del ojo */
+.password-field input {
+    padding-right: 3.2rem;
+}
+
+/* Botón para mostrar u ocultar la contraseña */
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.85rem;
+    transform: translateY(-50%);
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: transparent;
+    color: #7a7881;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+}
+
+/* Cambio visual al pasar el mouse por encima */
+.password-toggle:hover {
+    color: #d90416;
+    background: rgba(217, 4, 22, 0.06);
+}
+
+/* Enfoque visible para accesibilidad */
+.password-toggle:focus-visible {
+    outline: 2px solid rgba(217, 4, 22, 0.22);
+    outline-offset: 2px;
+}
+
+/* Texto pequeño de ayuda debajo de los campos */
+.field-help {
+    display: block;
+    margin-top: 6px;
+    color: #73727a;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+/* Parte inferior del formulario */
+.form-footer {
+    text-align: right;
+    margin: 0.4rem 0 1rem;
+}
+
+/* Enlaces pequeños del formulario */
+.link-small {
+    color: #d90416;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+/* Efecto hover de los enlaces */
+.link-small:hover {
+    text-decoration: underline;
+}
+
+/* Botón principal del login */
+.btn-primary {
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    padding: 1rem 1.15rem;
+    background: #d90416;
+    color: white;
+    font-size: 0.98rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    /* Sombra para darle más presencia visual */
+    box-shadow: 0 12px 18px rgba(217, 4, 22, 0.16);
+
+    transition: background 0.2s ease, transform 0.18s ease;
+}
+
+/* Cambio del botón al pasar el mouse */
+.btn-primary:hover {
+    background: #b00312;
+    transform: translateY(-1px);
+}
+
+/* Contenedor del enlace para volver */
+.auth-back-link {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+/* Ajustes para pantallas medianas tipo tablet */
+@media (max-width: 960px) {
+    .auth-row {
+        grid-template-columns: 1fr; /* en este punto ya se acomoda en vertical */
+    }
+
+    .auth-image-section {
+        min-height: 280px;
+    }
+}
+
+/* Ajustes para pantallas pequeñas tipo celular */
+@media (max-width: 640px) {
+    .auth-row {
+        padding: 12px;
+    }
+
+    .auth-image-overlay,
+    .auth-form-section {
+        padding: 20px;
+    }
+
+    .auth-title {
+        font-size: 2rem;
+    }
+
+    .auth-brand-copy h1 {
+        font-size: 2.2rem;
+    }
+
+    .auth-image-logo {
+        width: 92px;
+        height: 92px;
+    }
+}

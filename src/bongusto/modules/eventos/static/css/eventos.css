@@ -1,0 +1,320 @@
+/* Hoja de estilos `eventos.css` del modulo `eventos`. Aquí se maneja toda la parte visual de eventos. */
+
+/* Estilo general de la página */
+body {
+    background: #fafbfc;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Contenedor principal que organiza sidebar y contenido */
+.main-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+/* Menú lateral izquierdo del módulo */
+.sidebar {
+    background: #d90416;
+    color: #fff;
+    width: 240px;
+    padding: 32px 20px 20px 20px;
+    border-radius: 28px;
+    margin: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 32px);
+    align-self: flex-start;
+}
+
+/* Título principal del sidebar */
+.sidebar h3 {
+    font-weight: bold;
+    margin-bottom: 32px;
+}
+
+/* Lista de opciones del sidebar */
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Cada opción del menú lateral */
+.sidebar ul li {
+    margin-bottom: 18px;
+}
+
+/* Links del menú lateral */
+.sidebar ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.08em;
+}
+
+/* Iconos de los links del menú */
+.sidebar ul li a i {
+    margin-right: 10px;
+}
+
+/* Botón o enlace de cerrar sesión */
+.logout {
+    color: #fff;
+    text-decoration: none;
+    background: none;
+    border: none;
+    font-size: 1.08em;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+}
+
+/* Contenido */
+/* Zona principal donde se muestra la información del módulo */
+.content {
+    flex: 1;
+    padding: 40px 60px 40px 60px;
+}
+
+/* Header usuario */
+/* Barra superior donde normalmente va usuario y notificaciones */
+.user-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+    margin-bottom: 30px;
+}
+
+/* Imagen o avatar del usuario */
+.avatar {
+    border-radius: 50%;
+    border: 2px solid #eee;
+}
+
+/* Contenedor del icono de notificaciones */
+.bell-container {
+    cursor: pointer;
+}
+
+/* Icono de campana */
+.bell {
+    font-size: 1.7em;
+    color: #888;
+}
+
+/* Tabla mejorada */
+/* Caja que envuelve la tabla */
+.table-responsive {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-top: 20px;
+}
+
+/* Tabla principal */
+.table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Encabezados de la tabla */
+.table thead th {
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    padding: 15px;
+    border-bottom: 2px solid #e9ecef;
+    text-align: left;
+}
+
+/* Celdas del cuerpo de la tabla */
+.table tbody td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Última fila sin borde inferior */
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Efecto hover sobre las filas */
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Botones */
+/* Estilo base de los botones */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+/* Botón verde */
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+/* Hover del botón verde */
+.btn-success:hover {
+    background: #218838;
+}
+
+/* Botón rojo */
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Hover del botón rojo */
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+/* Botón azul */
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+/* Hover del botón azul */
+.btn-primary:hover {
+    background: #0069d9;
+}
+
+/* Botón claro */
+.btn-light {
+    background: #eaf3f7;
+}
+
+/* Versión pequeña del botón */
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.85em;
+}
+
+/* Formularios */
+/* Fila general de inputs o bloques */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* Columna mediana */
+.col-md-4 {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Columna de ancho completo */
+.col-12 {
+    width: 100%;
+}
+
+/* Separación entre elementos */
+.g-3 {
+    gap: 15px;
+}
+
+/* Margen inferior mediano */
+.mb-3 {
+    margin-bottom: 1rem;
+}
+
+/* Margen inferior más amplio */
+.mb-4 {
+    margin-bottom: 1.5rem;
+}
+
+/* Input base del formulario */
+.form-control {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+
+/* Efecto al activar el input */
+.form-control:focus {
+    outline: none;
+    border-color: #d90416;
+    box-shadow: 0 0 0 3px rgba(217, 4, 22, 0.1);
+}
+
+/* Labels de formularios */
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Títulos secundarios */
+h4 {
+    color: #333;
+    font-weight: 600;
+}
+
+/* Centrado de texto */
+.text-center {
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+
+/* En pantallas pequeñas el layout pasa a vertical */
+    .main-container {
+        flex-direction: column;
+    }
+
+/* El sidebar se adapta al ancho disponible */
+    .sidebar {
+        width: auto;
+        margin: 8px;
+    }
+
+/* Reduce el padding del contenido en móvil */
+    .content {
+        padding: 24px 16px;
+    }
+    
+/* Permite scroll horizontal en la tabla si hace falta */
+    .table-responsive {
+        overflow-x: auto;
+    }
+}
+
+/* Formulario de crear/editar evento */
+/* Caja principal del formulario de eventos */
+.evento-form {
+    max-width: 500px;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}

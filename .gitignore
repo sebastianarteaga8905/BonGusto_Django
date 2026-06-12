@@ -1,0 +1,25 @@
+# Environment and IDE files
+runserver_email.ps1
+.env
+.venv_broken/
+.venv/
+venv/
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution metadata
+*.egg-info/
+.eggs/
+
+# Log files
+runserver.err.log
+runserver.out.log
+
+# Django local files
+*.sqlite3
+
+# Optional files
+.DS_Store
