@@ -1,25 +1,50 @@
-# Environment and IDE files
-runserver_email.ps1
-.env
-.venv_broken/
+# Entornos virtuales
 .venv/
 venv/
+env/
+ENV/
+.venv_broken/
 
-# Python cache and build artifacts
+# Python cache
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
 
-# Distribution metadata
-*.egg-info/
-.eggs/
+# Variables de entorno y claves
+.env
+.env.*
+*.env
 
-# Log files
-runserver.err.log
-runserver.out.log
-
-# Django local files
+# Base de datos local
+db.sqlite3
 *.sqlite3
 
-# Optional files
+# Archivos estáticos generados
+staticfiles/
+static_root/
+
+# Archivos subidos localmente
+media/
+
+# Node / frontend si existe
+node_modules/
+dist/
+build/
+
+# Sistema operativo / editor
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Temporales y utilidades locales no necesarias para Railway
+.tmp/
+k6/
+runserver_email.ps1

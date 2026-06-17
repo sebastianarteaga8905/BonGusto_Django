@@ -1,14 +1,31 @@
-﻿"""
+"""
 infrastructure/settings.py
-AquÃ­ estÃ¡ toda la configuraciÃ³n principal de Django para BonGusto.
+Configuracion principal de Django para BonGusto.
 """
 
+import importlib.util
 import os
 from pathlib import Path
 from urllib.parse import urlparse
 
-# Ruta base del proyecto.
-# Desde aquÃ­ se construyen todas las demÃ¡s rutas (archivos, static, media, etc.)
+try:
+    import dj_database_url
+    from decouple import config
+except ImportError:  # pragma: no cover - compatibilidad local antes de instalar dependencias
+    dj_database_url = None
+    def config(name, default=None, cast=str):
+        value = os.getenv(name, default)
+        if value is None:
+            raise RuntimeError(f"Falta definir la variable de entorno requerida: {name}")
+
+        if cast is bool:
+            if isinstance(value, bool):
+                return value
+            return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+        return cast(value) if cast else value
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
@@ -30,62 +47,110 @@ def _load_dotenv(path: Path) -> None:
                 os.environ[key] = value
 
 
+def _database_from_url(database_url: str) -> dict:
+    """Parsea DATABASE_URL con dj-database-url o con fallback manual."""
+    if dj_database_url is not None:
+        return dj_database_url.config(
+            default=database_url,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+
+    parsed = urlparse(database_url)
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": (parsed.path or "").lstrip("/"),
+        "USER": parsed.username or "",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or 5432),
+        "CONN_MAX_AGE": 600,
+        "OPTIONS": {
+            "sslmode": "require",
+        },
+    }
+
+
 _load_dotenv(BASE_DIR / ".env")
 
-# Clave secreta por defecto (solo para desarrollo).
 _DEFAULT_SECRET_KEY = "django-dev-bongusto-cambia-esta-clave"
 
-# Intenta tomar la clave desde variables de entorno.
-# Si no encuentra nada, usa la de desarrollo.
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", _DEFAULT_SECRET_KEY)
+def required_env(name: str, default=None) -> str:
+    """Obtiene una variable obligatoria del entorno."""
+    value = config(name, default=default)
+    if value in (None, ""):
+        raise RuntimeError(f"Falta definir la variable de entorno requerida: {name}")
+    return value
 
-# Define el entorno del proyecto (development o production).
-DJANGO_ENV = os.getenv("DJANGO_ENV", "development").strip().lower()
 
-# DEBUG:
-# True en desarrollo â†’ muestra errores detallados
-# False en producciÃ³n â†’ oculta errores sensibles
-DEBUG = os.getenv("DJANGO_DEBUG", "true" if DJANGO_ENV != "production" else "false").lower() == "true"
+def env_bool(name: str, default: bool = False) -> bool:
+    """Lee una variable booleana del entorno."""
+    return config(name, default=default, cast=bool)
 
-# Hosts permitidos (desde variables de entorno).
-_allowed_hosts_from_env = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 
-# Convierte los hosts en lista y limpia espacios.
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in _allowed_hosts_from_env.split(",")
-    if host.strip()
-]
+def env_list(name: str, default=None) -> list[str]:
+    """Lee listas separadas por coma desde el entorno."""
+    raw = config(name, default=default or "")
+    if not raw:
+        return []
+    return [item.strip() for item in str(raw).split(",") if item.strip()]
 
-# En desarrollo, si no hay hosts definidos, permite todo (*)
-if DEBUG and _allowed_hosts_from_env.strip() in {"", "127.0.0.1,localhost"}:
-    ALLOWED_HOSTS = ["*"]
 
-# Agrega hosts bÃ¡sicos para pruebas si no estÃ¡n.
+DJANGO_ENV = config("DJANGO_ENV", default="development").strip().lower()
+
+SECRET_KEY = required_env(
+    "DJANGO_SECRET_KEY",
+    default=_DEFAULT_SECRET_KEY if DJANGO_ENV != "production" else None,
+)
+
+DEBUG = env_bool("DJANGO_DEBUG", False)
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
+RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+if RAILWAY_PUBLIC_DOMAIN and RAILWAY_PUBLIC_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
 for host_pruebas in ("testserver", "localhost", "127.0.0.1"):
     if host_pruebas not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(host_pruebas)
 
-# Seguridad importante:
-# En producciÃ³n NO se puede usar la clave por defecto.
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+if RAILWAY_PUBLIC_DOMAIN:
+    railway_origin = f"https://{RAILWAY_PUBLIC_DOMAIN}"
+    if railway_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(railway_origin)
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{host}"
+        for host in ALLOWED_HOSTS
+        if host not in {"*", "localhost", "127.0.0.1"} and not host.startswith(".")
+    ]
+
 if DJANGO_ENV == "production" and not DEBUG and SECRET_KEY == _DEFAULT_SECRET_KEY:
     raise RuntimeError(
         "Debes definir DJANGO_SECRET_KEY en el entorno cuando DJANGO_DEBUG=false."
     )
 
-# Apps instaladas en el proyecto.
+_HAS_CORSHEADERS = importlib.util.find_spec("corsheaders") is not None
+_HAS_WHITENOISE = importlib.util.find_spec("whitenoise") is not None
+
 INSTALLED_APPS = [
-    "daphne",  # Servidor ASGI (para WebSockets)
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "channels",  # Soporte para WebSocket (chat en tiempo real)
+    "channels",
     "django_extensions",
-
-    # Apps propias de BonGusto
+    *(
+        ["corsheaders"]
+        if _HAS_CORSHEADERS
+        else []
+    ),
     "bongusto.domain",
     "bongusto.interfaces",
     "bongusto.modules.auth.apps.AuthConfig",
@@ -108,29 +173,37 @@ INSTALLED_APPS = [
     "bongusto.modules.usuarios.apps.UsuariosConfig",
 ]
 
-# Middleware â†’ se ejecuta en cada peticiÃ³n
 MIDDLEWARE = [
+    *(
+        ["corsheaders.middleware.CorsMiddleware"]
+        if _HAS_CORSHEADERS
+        else []
+    ),
     "django.middleware.security.SecurityMiddleware",
+    *(
+        ["whitenoise.middleware.WhiteNoiseMiddleware"]
+        if _HAS_WHITENOISE
+        else []
+    ),
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-
-    # Middleware propio de BonGusto (manejo de sesiones / auth)
     "bongusto.modules.shared.middleware.AuthMiddleware",
 ]
 
-# Archivo principal de rutas
-ROOT_URLCONF = "bongusto.interfaces.urls"
+CORS_ALLOW_ALL_ORIGINS = True
 
-# ConfiguraciÃ³n de templates (HTML)
+ROOT_URLCONF = "bongusto.interfaces.urls"
+WSGI_APPLICATION = "bongusto.wsgi.application"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],  # AquÃ­ podrÃ­as agregar rutas manuales si quisieras
-        "APP_DIRS": True,  # Usa los templates dentro de cada app
+        "DIRS": [],
+        "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -142,49 +215,35 @@ TEMPLATES = [
     },
 ]
 
-# ASGI â†’ necesario para WebSockets (chat)
 ASGI_APPLICATION = "bongusto.infrastructure.asgi.application"
 
-# Base de datos (PostgreSQL)
-_database_url = os.getenv("DATABASE_URL", "").strip()
-if _database_url:
-    _parsed_db = urlparse(_database_url)
+DATABASE_URL = config("DATABASE_URL", default=None)
+if DATABASE_URL:
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": (_parsed_db.path or "").lstrip("/"),
-            "USER": _parsed_db.username or "",
-            "PASSWORD": _parsed_db.password or "",
-            "HOST": _parsed_db.hostname or "127.0.0.1",
-            "PORT": str(_parsed_db.port or 5432),
-        }
+        "default": _database_from_url(DATABASE_URL)
     }
 else:
-    # Fallback por variables separadas en .env
+    if DJANGO_ENV == "production":
+        raise RuntimeError(
+            "Falta DATABASE_URL en el entorno de produccion. Railway debe proveer DATABASE_URL."
+        )
+
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "bongustofi"),
-            "USER": os.getenv("DB_USER", "postgres"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-            "PORT": os.getenv("DB_PORT", "5432"),
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
-# ConfiguraciÃ³n de WebSockets (Channels)
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 
 if REDIS_URL:
     parsed_redis = urlparse(REDIS_URL)
-
-    # Construye la URL de conexiÃ³n a Redis
     _redis_location = (
         f"redis://{parsed_redis.hostname or '127.0.0.1'}:{parsed_redis.port or 6379}"
         f"/{(parsed_redis.path or '/0').lstrip('/') or '0'}"
     )
 
-    # Channels usando Redis (recomendado en producciÃ³n)
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -196,7 +255,6 @@ if REDIS_URL:
         }
     }
 
-    # Cache tambiÃ©n en Redis
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -206,7 +264,6 @@ if REDIS_URL:
         }
     }
 else:
-    # Sin Redis â†’ todo en memoria (solo desarrollo)
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
@@ -221,72 +278,83 @@ else:
         }
     }
 
-# Idioma y zona horaria
 LANGUAGE_CODE = "es-co"
 TIME_ZONE = "America/Bogota"
 USE_I18N = True
 USE_TZ = True
 
-# Archivos estÃ¡ticos (CSS, JS, imÃ¡genes)
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-# Archivos subidos (media)
+if _HAS_WHITENOISE:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Tipo de ID automÃ¡tico
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ConfiguraciÃ³n de sesiÃ³n
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
-SESSION_COOKIE_AGE = 3600  # dura 1 hora
+SESSION_COOKIE_AGE = 3600
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = not DEBUG  # solo seguro en producciÃ³n
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 
-# ConfiguraciÃ³n CSRF
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 
-# Seguridad del navegador
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
 
-# HSTS (solo producciÃ³n)
-SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_HSTS_SECONDS = int(
+    config(
+        "SECURE_HSTS_SECONDS",
+        default=os.getenv("DJANGO_SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"),
+    )
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
+SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
 
-# RedirecciÃ³n automÃ¡tica a HTTPS
-SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "false" if DEBUG else "true").lower() == "true"
+SECURE_SSL_REDIRECT = env_bool(
+    "SECURE_SSL_REDIRECT",
+    str(os.getenv("DJANGO_SECURE_SSL_REDIRECT", "false" if DEBUG else "true")).lower() == "true",
+)
 
-# ConfiguraciÃ³n de correo (SMTP)
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 
-# Correo que envÃ­a el sistema
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@bongusto.local")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "no-reply@bongusto.local",
+)
 
-# Tiempo de validez del cÃ³digo de recuperaciÃ³n
-PASSWORD_RESET_CODE_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_CODE_TTL_MINUTES", "10"))
-
-# Modo de demostraciÃ³n para el flujo de recuperaciÃ³n por enlace.
-# Solo se activa explÃ­citamente desde el entorno; por defecto usa SMTP real.
+PASSWORD_RESET_CODE_TTL_MINUTES = int(
+    os.getenv("PASSWORD_RESET_CODE_TTL_MINUTES", "10")
+)
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+PASSWORD_RESET_TOKEN_TTL_SECONDS = int(
+    os.getenv("PASSWORD_RESET_TOKEN_TTL_SECONDS", "3600")
+)
 
-# Tiempo de vida del token de enlace de recuperaciÃ³n.
-PASSWORD_RESET_TOKEN_TTL_SECONDS = int(os.getenv("PASSWORD_RESET_TOKEN_TTL_SECONDS", "3600"))
-
-# Tiempo de vida del token de API
 _default_api_token_ttl = 60 * 60 * 24 * 30 if DEBUG else 60 * 60 * 8
-API_TOKEN_TTL_SECONDS = int(os.getenv("API_TOKEN_TTL_SECONDS", str(_default_api_token_ttl)))
-
-
+API_TOKEN_TTL_SECONDS = int(
+    os.getenv("API_TOKEN_TTL_SECONDS", str(_default_api_token_ttl))
+)
