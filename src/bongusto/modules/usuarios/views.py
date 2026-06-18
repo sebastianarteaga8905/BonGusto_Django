@@ -6,6 +6,7 @@ las del panel web como algunas funciones de apoyo para la API.
 import json
 from collections import defaultdict
 
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -387,6 +388,9 @@ def store(request):
         estado="Activo",
         tipo_usuario="mesero",
     )
+    rol_preview_id = request.POST.get("id_rol")
+    if rol_preview_id:
+        usuario_preview.id_rol = Rol.objects.filter(pk=rol_preview_id).first()
 
     if not clave_valida:
         contexto = helper.contexto_form_crear(usuario_preview, error_clave)
@@ -423,10 +427,28 @@ def store(request):
             f"Creacion de usuario tipo mesero {usuario.nombre_completo() or usuario.correo or usuario.id_usuario}.",
         )
         return redirect("/usuarios")
-    except Exception:
+    except ValidationError as exc:
+        if hasattr(exc, "message_dict") and exc.message_dict:
+            detalle = []
+            for mensajes in exc.message_dict.values():
+                if isinstance(mensajes, (list, tuple)):
+                    detalle.extend(str(m) for m in mensajes if str(m).strip())
+                elif str(mensajes).strip():
+                    detalle.append(str(mensajes))
+            mensaje_error = " ".join(detalle).strip() or "No fue posible guardar el usuario."
+        else:
+            mensajes = getattr(exc, "messages", None) or [str(exc)]
+            mensaje_error = " ".join(str(m) for m in mensajes if str(m).strip()).strip() or "No fue posible guardar el usuario."
+
         contexto = helper.contexto_form_crear(
             usuario_preview,
-            "No fue posible guardar el usuario.",
+            mensaje_error,
+        )
+        return render(request, "usuario/create.html", contexto)
+    except Exception as exc:
+        contexto = helper.contexto_form_crear(
+            usuario_preview,
+            f"No fue posible guardar el usuario. {exc}",
         )
         return render(request, "usuario/create.html", contexto)
 
