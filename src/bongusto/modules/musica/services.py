@@ -14,6 +14,15 @@ from bongusto.modules.shared.table_state import MesaStateService
 
 
 class MusicaService:
+    @staticmethod
+    def _aware_dt(value):
+        if not value:
+            return None
+        if timezone.is_naive(value):
+            return timezone.make_aware(value, timezone.get_current_timezone())
+        return value
+
+
     """Gestiona catalogo, cola activa, historial y reproduccion automatica."""
 
     DEFAULT_DURATION_SECONDS = 210
@@ -416,7 +425,7 @@ class MusicaService:
         changed = False
 
         if reproduciendo:
-            fin_programado = (reproduciendo.fecha_inicio_reproduccion or ahora) + timedelta(
+            fin_programado = (self._aware_dt(reproduciendo.fecha_inicio_reproduccion) or ahora) + timedelta(
                 seconds=self.duracion_para_solicitud(reproduciendo)
             )
             if fin_programado <= ahora:
@@ -475,7 +484,8 @@ class MusicaService:
         duracion = self.duracion_para_solicitud(solicitud)
         remaining = None
         if solicitud.estado_solicitud == "reproduciendo" and solicitud.fecha_inicio_reproduccion:
-            fin = solicitud.fecha_inicio_reproduccion + timedelta(seconds=duracion)
+            inicio = self._aware_dt(solicitud.fecha_inicio_reproduccion)
+            fin = (inicio or timezone.now()) + timedelta(seconds=duracion)
             remaining = max(0, int((fin - timezone.now()).total_seconds()))
         return {
             "id_solicitud": solicitud.id_solicitud,
@@ -490,9 +500,9 @@ class MusicaService:
             "posicion_orden": solicitud.posicion_orden or 0,
             "duracion_segundos": duracion,
             "segundos_restantes": remaining,
-            "fecha_solicitud": solicitud.fecha_solicitud.isoformat() if solicitud.fecha_solicitud else "",
-            "fecha_inicio_reproduccion": solicitud.fecha_inicio_reproduccion.isoformat() if solicitud.fecha_inicio_reproduccion else "",
-            "fecha_finalizacion": solicitud.fecha_finalizacion.isoformat() if solicitud.fecha_finalizacion else "",
+            "fecha_solicitud": self._aware_dt(solicitud.fecha_solicitud).isoformat() if solicitud.fecha_solicitud else "",
+            "fecha_inicio_reproduccion": self._aware_dt(solicitud.fecha_inicio_reproduccion).isoformat() if solicitud.fecha_inicio_reproduccion else "",
+            "fecha_finalizacion": self._aware_dt(solicitud.fecha_finalizacion).isoformat() if solicitud.fecha_finalizacion else "",
             "eliminado_por": solicitud.eliminado_por.nombre_completo() if solicitud.eliminado_por else "",
             "motivo_eliminacion": solicitud.motivo_eliminacion or "",
             "musica": {
@@ -536,3 +546,6 @@ class MusicaService:
 
 
 __all__ = ["MusicaService", "Musica", "Usuario", "SolicitudMusica"]
+
+
+
