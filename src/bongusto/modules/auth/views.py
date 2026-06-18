@@ -227,6 +227,67 @@ class AuthPageHelper:
             / "img"
             / "logobongusto.png"
         )
+    def _enviar_correo_resend(self, email, subject, text_body, html_body):
+        api_key = (getattr(settings, "RESEND_API_KEY", "") or "").strip()
+        if not api_key:
+            raise RuntimeError("RESEND_API_KEY no esta configurada.")
+
+        from_email = (getattr(settings, "RESEND_FROM_EMAIL", "") or "").strip() or (
+            getattr(settings, "DEFAULT_FROM_EMAIL", "") or ""
+        ).strip()
+        if not from_email:
+            raise RuntimeError("RESEND_FROM_EMAIL o DEFAULT_FROM_EMAIL no estan configurados.")
+
+        payload = {
+            "from": from_email,
+            "to": [email],
+            "subject": subject,
+            "text": text_body,
+            "html": html_body,
+        }
+
+        req = urlrequest.Request(
+            "https://api.resend.com/emails",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urlrequest.urlopen(req, timeout=getattr(settings, "EMAIL_TIMEOUT", 20)) as response:
+                status_code = getattr(response, "status", 200)
+                response_body = response.read().decode("utf-8", errors="replace")
+        except urlerror.HTTPError as exc:
+            detalle = exc.read().decode("utf-8", errors="replace")
+            logger.exception("Resend rechazo el correo para %s", email)
+            raise RuntimeError(f"Resend respondio HTTP {exc.code}: {detalle}") from exc
+        except urlerror.URLError as exc:
+            logger.exception("No fue posible conectar con Resend para %s", email)
+            raise RuntimeError(f"No fue posible conectar con Resend: {exc.reason}") from exc
+
+        if status_code >= 400:
+            raise RuntimeError(f"Resend respondio HTTP {status_code}: {response_body}")
+
+    def _enviar_correo_smtp(self, email, subject, text_body, html_body):
+        message = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
+        )
+        message.attach_alternative(html_body, "text/html")
+        logo_path = self.logo_path()
+        if logo_path.exists():
+            with logo_path.open("rb") as logo_file:
+                logo = MIMEImage(logo_file.read())
+                logo.add_header("Content-ID", "<bongusto-logo>")
+                logo.add_header("Content-Disposition", "inline", filename="logobongusto.png")
+                message.attach(logo)
+        message.send(fail_silently=False)
+
 
     # Arma y envía el correo de recuperación.
     # Manda versión texto, versión HTML y agrega el logo si existe.
