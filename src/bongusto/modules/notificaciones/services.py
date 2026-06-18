@@ -31,7 +31,7 @@ class NotificacionService:
             if "tipo" not in existing_columns:
                 cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN tipo VARCHAR(30) DEFAULT 'general'")
             if "leida" not in existing_columns:
-                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN leida BOOLEAN DEFAULT FALSE")
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN leida SMALLINT DEFAULT 0")
             if "fecha_envio" not in existing_columns:
                 cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN fecha_envio TIMESTAMP NULL")
                 cursor.execute(f"UPDATE {table_name} SET fecha_envio = CURRENT_TIMESTAMP WHERE fecha_envio IS NULL")
@@ -118,4 +118,5 @@ class NotificacionService:
 
 
 __all__ = ["NotificacionService"]
+
 

@@ -917,7 +917,7 @@ class NotificacionCliente(models.Model):
     tipo = models.CharField(max_length=30, default="general")
 
     # Estado de lectura
-    leida = models.BooleanField(default=False)
+    leida = models.PositiveSmallIntegerField(default=0)
     fecha_envio = models.DateTimeField(auto_now_add=True)
     fecha_lectura = models.DateTimeField(null=True, blank=True)
 
@@ -930,3 +930,4 @@ class NotificacionCliente(models.Model):
     def __str__(self):
         destino = self.id_usuario.nombre_completo() if self.id_usuario else "Sin destinatario"
         return f"{self.titulo} -> {destino}"
+
