@@ -1,5 +1,7 @@
 """Vistas del módulo de autenticación con un flujo claro y fácil de entender."""
 
+import logging
+import smtplib
 from datetime import datetime, timedelta
 from email.mime.image import MIMEImage
 from pathlib import Path
@@ -27,6 +29,7 @@ from bongusto.modules.shared.security import (
 # Se crea una instancia del servicio de usuario.
 # Desde aquí se apoya toda la parte lógica del login.
 _service = UsuarioService()
+logger = logging.getLogger(__name__)
 
 
 class AuthPageHelper:
@@ -44,7 +47,16 @@ class AuthPageHelper:
     def mensaje_error_envio(self, exc):
         if settings.DEBUG and exc:
             return f"No fue posible enviar el codigo de recuperacion en este momento. Detalle: {exc}"
-        return "No fue posible enviar el codigo de recuperacion en este momento."
+        detalle = str(exc or "").strip().lower()
+        if isinstance(exc, smtplib.SMTPAuthenticationError) or "authentication" in detalle or "username and password not accepted" in detalle:
+            return "El servidor de correo rechazo las credenciales SMTP. Revisa EMAIL_HOST_USER y EMAIL_HOST_PASSWORD."
+        if isinstance(exc, smtplib.SMTPConnectError) or "timed out" in detalle or "timeout" in detalle:
+            return "No fue posible conectar con el servidor de correo. Revisa EMAIL_HOST, EMAIL_PORT, TLS/SSL y el timeout."
+        if "certificate" in detalle or "ssl" in detalle or "tls" in detalle:
+            return "La conexion segura con el correo fallo. Revisa EMAIL_USE_TLS, EMAIL_USE_SSL y el puerto configurado."
+        if "sender" in detalle or "not permitted" in detalle or "unauthorized" in detalle:
+            return "El proveedor de correo rechazo el remitente. Revisa DEFAULT_FROM_EMAIL y la cuenta SMTP configurada."
+        return "No fue posible enviar el codigo de recuperacion en este momento. Revisa la configuracion SMTP en Railway."
 
     # Arma el contexto para la vista de cambio de contraseña.
     # También manda la ayuda de la política de seguridad.
@@ -390,6 +402,7 @@ def password_email(request):
             ),
         )
     except Exception as exc:
+        logger.exception("Error enviando codigo de recuperacion web a %s", email)
         # Si algo falla, se muestra un mensaje general.
         return render(
             request,
@@ -578,6 +591,7 @@ def api_password_request_code(request):
             }
         )
     except Exception as exc:
+        logger.exception("Error enviando codigo de recuperacion API a %s", email)
         return JsonResponse(
             {"error": _helper.mensaje_error_envio(exc)},
             status=500,
