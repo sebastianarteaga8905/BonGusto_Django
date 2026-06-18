@@ -1,7 +1,9 @@
 """Vistas del módulo de autenticación con un flujo claro y fácil de entender."""
 
+import json
 import logging
-import smtplib
+from urllib import error as urlerror
+from urllib import request as urlrequest
 from datetime import datetime, timedelta
 from email.mime.image import MIMEImage
 from pathlib import Path
@@ -47,10 +49,12 @@ class AuthPageHelper:
     def mensaje_error_envio(self, exc):
         if settings.DEBUG and exc:
             return f"No fue posible enviar el codigo de recuperacion en este momento. Detalle: {exc}"
+        if getattr(settings, "RESEND_API_KEY", ""):
+            return "No fue posible enviar el codigo de recuperacion en este momento. Revisa la configuracion de Resend en Railway."
         detalle = str(exc or "").strip().lower()
-        if isinstance(exc, smtplib.SMTPAuthenticationError) or "authentication" in detalle or "username and password not accepted" in detalle:
+        if "authentication" in detalle or "username and password not accepted" in detalle:
             return "El servidor de correo rechazo las credenciales SMTP. Revisa EMAIL_HOST_USER y EMAIL_HOST_PASSWORD."
-        if isinstance(exc, smtplib.SMTPConnectError) or "timed out" in detalle or "timeout" in detalle:
+        if "timed out" in detalle or "timeout" in detalle or "network is unreachable" in detalle:
             return "No fue posible conectar con el servidor de correo. Revisa EMAIL_HOST, EMAIL_PORT, TLS/SSL y el timeout."
         if "certificate" in detalle or "ssl" in detalle or "tls" in detalle:
             return "La conexion segura con el correo fallo. Revisa EMAIL_USE_TLS, EMAIL_USE_SSL y el puerto configurado."
@@ -144,6 +148,12 @@ class AuthPageHelper:
 
     # Verifica si el correo del sistema está listo para enviar mensajes.
     def correo_configurado(self):
+        if (getattr(settings, "RESEND_API_KEY", "") or "").strip():
+            remitente = (getattr(settings, "RESEND_FROM_EMAIL", "") or "").strip() or (
+                getattr(settings, "DEFAULT_FROM_EMAIL", "") or ""
+            ).strip()
+            return bool(remitente)
+
         backend = (getattr(settings, "EMAIL_BACKEND", "") or "").strip()
         if backend != "django.core.mail.backends.smtp.EmailBackend":
             return True
@@ -223,42 +233,20 @@ class AuthPageHelper:
     def enviar_correo_recuperacion(self, email, context):
         text_body = render_to_string("auth/password_reset_email.txt", context)
         html_body = render_to_string("auth/password_reset_email.html", context)
-
-        message = EmailMultiAlternatives(
-            subject="BonGusto | Codigo de recuperacion de acceso",
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[email],
-        )
-        message.attach_alternative(html_body, "text/html")
-        logo_path = self.logo_path()
-        if logo_path.exists():
-            with logo_path.open("rb") as logo_file:
-                logo = MIMEImage(logo_file.read())
-                logo.add_header("Content-ID", "<bongusto-logo>")
-                logo.add_header("Content-Disposition", "inline", filename="logobongusto.png")
-                message.attach(logo)
-        message.send(fail_silently=False)
+        subject = "BonGusto | Codigo de recuperacion de acceso"
+        if (getattr(settings, "RESEND_API_KEY", "") or "").strip():
+            self._enviar_correo_resend(email, subject, text_body, html_body)
+            return
+        self._enviar_correo_smtp(email, subject, text_body, html_body)
 
     def enviar_correo_enlace_recuperacion(self, email, context):
         text_body = render_to_string("auth/password_reset_link_email.txt", context)
         html_body = render_to_string("auth/password_reset_link_email.html", context)
-
-        message = EmailMultiAlternatives(
-            subject="Recuperacion de contrasena - BonGusto",
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[email],
-        )
-        message.attach_alternative(html_body, "text/html")
-        logo_path = self.logo_path()
-        if logo_path.exists():
-            with logo_path.open("rb") as logo_file:
-                logo = MIMEImage(logo_file.read())
-                logo.add_header("Content-ID", "<bongusto-logo>")
-                logo.add_header("Content-Disposition", "inline", filename="logobongusto.png")
-                message.attach(logo)
-        message.send(fail_silently=False)
+        subject = "Recuperacion de contrasena - BonGusto"
+        if (getattr(settings, "RESEND_API_KEY", "") or "").strip():
+            self._enviar_correo_resend(email, subject, text_body, html_body)
+            return
+        self._enviar_correo_smtp(email, subject, text_body, html_body)
 
     def construir_url_recuperacion(self, request, token):
         if request is not None:
@@ -692,6 +680,7 @@ def api_forgot_password(request):
         _helper.enviar_correo_enlace_recuperacion(correo, contexto)
         registrar_movimiento(request, f"Solicitud de recuperacion enviada por correo para {correo}.")
     except Exception as exc:
+        logger.exception("Error enviando enlace de recuperacion API a %s", correo)
         registrar_movimiento(request, f"Fallo enviando recuperacion por enlace para {correo}: {exc}.")
 
     return JsonResponse(respuesta)
