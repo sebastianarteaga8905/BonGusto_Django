@@ -43,7 +43,7 @@ class Mesa(models.Model):
         choices=ESTADO_CHOICES,
         default=ESTADO_LIBRE,
     )
-    activa = models.BooleanField(default=True)
+    activa = models.PositiveSmallIntegerField(default=1)
     usuario_actual = models.ForeignKey(
         Usuario,
         db_column="id_usuario_actual",
@@ -121,3 +121,4 @@ class Mesa(models.Model):
 
 
 __all__ = ["Mesa"]
+
