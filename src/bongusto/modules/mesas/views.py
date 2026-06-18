@@ -309,7 +309,11 @@ def api_snapshot(request):
     if error:
         return error
 
-    return JsonResponse(_operacion_service.snapshot_para_usuario(usuario))
+    response = JsonResponse(_operacion_service.snapshot_para_usuario(usuario))
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 @csrf_exempt

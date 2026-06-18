@@ -428,7 +428,8 @@
 
   async function syncSnapshotFromRest() {
     try {
-      const response = await fetch("/api/operacion/snapshot", {
+      const response = await fetch(`/api/operacion/snapshot?ts=${Date.now()}`, {
+        cache: "no-store",
         headers: { "Accept": "application/json" },
       });
       if (!response.ok) {
