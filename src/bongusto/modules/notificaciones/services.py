@@ -13,11 +13,30 @@ class NotificacionService:
 
     def _ensure_schema(self):
         existing_tables = connection.introspection.table_names()
-        if NotificacionCliente._meta.db_table in existing_tables:
+        table_name = NotificacionCliente._meta.db_table
+        if table_name not in existing_tables:
+            with connection.schema_editor() as schema_editor:
+                schema_editor.create_model(NotificacionCliente)
             return
 
-        with connection.schema_editor() as schema_editor:
-            schema_editor.create_model(NotificacionCliente)
+        existing_columns = {
+            column.name for column in connection.introspection.get_table_description(connection.cursor(), table_name)
+        }
+
+        with connection.cursor() as cursor:
+            if "titulo" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN titulo VARCHAR(120) DEFAULT ''")
+            if "mensaje" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN mensaje TEXT DEFAULT ''")
+            if "tipo" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN tipo VARCHAR(30) DEFAULT 'general'")
+            if "leida" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN leida BOOLEAN DEFAULT FALSE")
+            if "fecha_envio" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN fecha_envio TIMESTAMP NULL")
+                cursor.execute(f"UPDATE {table_name} SET fecha_envio = CURRENT_TIMESTAMP WHERE fecha_envio IS NULL")
+            if "fecha_lectura" not in existing_columns:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN fecha_lectura TIMESTAMP NULL")
 
     def listar_todas(self):
         self._ensure_schema()
@@ -99,3 +118,4 @@ class NotificacionService:
 
 
 __all__ = ["NotificacionService"]
+
