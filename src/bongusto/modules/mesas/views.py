@@ -6,7 +6,9 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
-from bongusto.domain.models import SolicitudPago, Usuario
+from django.utils import timezone
+
+from bongusto.domain.models import PedidoEncabezado, Producto, SolicitudPago, Usuario
 from bongusto.modules.mesas.forms import MesaForm
 from bongusto.modules.mesas.models import Mesa
 from bongusto.modules.mesas.services import OperacionMesasService
@@ -73,6 +75,68 @@ def _solicitud_activa_mesa(mesa_id):
         .order_by("-fecha_creacion")
         .first()
     )
+
+
+def _pedido_takeout(pk):
+    pedido = (
+        PedidoEncabezado.objects.select_related("id_usuario", "mesa")
+        .prefetch_related("pedidodetalle_set")
+        .filter(pk=pk)
+        .first()
+    )
+    if not pedido:
+        return None
+    tipo_pedido = (getattr(pedido, "tipo_pedido", "restaurante") or "").strip().lower()
+    if tipo_pedido != "para_llevar":
+        return None
+    return pedido
+
+
+def _pedido_takeout_payload(pedido):
+    solicitud_pago = (
+        SolicitudPago.objects.select_related("id_pedido", "id_usuario", "atendido_por")
+        .filter(id_pedido=pedido)
+        .exclude(estado="finalizada")
+        .order_by("-fecha_creacion")
+        .first()
+    )
+    items = []
+    for detalle in pedido.pedidodetalle_set.all():
+        producto = Producto.objects.filter(pk=detalle.id_producto).first()
+        cantidad = int(detalle.cantidad or 0)
+        precio = float(detalle.precio or 0)
+        items.append(
+            {
+                "id_detalle": detalle.id_detalle,
+                "id_producto": detalle.id_producto,
+                "nombre_producto": producto.nombre_producto if producto else f"Producto #{detalle.id_producto}",
+                "descripcion_producto": producto.descripcion_producto if producto else "",
+                "cantidad": cantidad,
+                "precio": precio,
+                "subtotal": float(cantidad * precio),
+            }
+        )
+
+    payload = {
+        "id_pedido": pedido.id_pedido,
+        "id_usuario": pedido.id_usuario_id,
+        "cliente_nombre": pedido.id_usuario.nombre_completo() if pedido.id_usuario else "",
+        "cliente_correo": pedido.id_usuario.correo if pedido.id_usuario else "",
+        "mesa_id": getattr(pedido, "mesa_id", None),
+        "mesa_label": "Para llevar",
+        "id_restaurante": pedido.id_restaurante,
+        "tipo_pedido": "para_llevar",
+        "fecha_pedido": str(pedido.fecha_pedido) if pedido.fecha_pedido else None,
+        "total_pedido": float(pedido.total_pedido or 0),
+        "estado": getattr(pedido, "estado_pedido", "abierto"),
+        "fecha_finalizacion": (
+            pedido.fecha_finalizacion.isoformat() if getattr(pedido, "fecha_finalizacion", None) else None
+        ),
+        "items": items,
+    }
+    if solicitud_pago:
+        payload["pago"] = _pago_service.solicitud_to_dict(solicitud_pago)
+    return payload
 
 
 def _contexto_gestion(request, *, form=None, gestion_error="", gestion_ok=""):
@@ -314,6 +378,104 @@ def api_snapshot(request):
     response["Pragma"] = "no-cache"
     response["Expires"] = "0"
     return response
+
+
+@csrf_exempt
+def api_takeout_detalle(request, pk):
+    if request.method != "GET":
+        return JsonResponse({"error": "Metodo no permitido"}, status=405)
+
+    usuario = _usuario_desde_sesion(request)
+    if not usuario or not _es_operativo(usuario):
+        return JsonResponse({"error": "Autenticacion requerida"}, status=401)
+
+    pedido = _pedido_takeout(pk)
+    if not pedido:
+        return JsonResponse({"error": "Pedido para llevar no encontrado"}, status=404)
+
+    return JsonResponse(_pedido_takeout_payload(pedido))
+
+
+@csrf_exempt
+def api_takeout_actualizar_estado(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"error": "Metodo no permitido"}, status=405)
+
+    usuario = _usuario_desde_sesion(request)
+    if not usuario or not _es_operativo(usuario):
+        return JsonResponse({"error": "No autorizado"}, status=403)
+
+    data, error = _leer_json(request)
+    if error:
+        return error
+
+    estado = (data.get("estado") or "").strip().lower()
+    estados_validos = {
+        "abierto",
+        "en_preparacion",
+        "listo_para_recoger",
+        "entregado",
+        "pagado",
+        "finalizado",
+    }
+    if estado not in estados_validos:
+        return JsonResponse({"error": "Estado de pedido no permitido"}, status=400)
+
+    pedido = _pedido_takeout(pk)
+    if not pedido:
+        return JsonResponse({"error": "Pedido para llevar no encontrado"}, status=404)
+
+    estado_actual = (getattr(pedido, "estado_pedido", "abierto") or "abierto").strip().lower()
+    if estado_actual == "finalizado" and estado != "finalizado":
+        return JsonResponse({"error": "El pedido ya fue finalizado"}, status=400)
+
+    pedido.estado_pedido = estado
+    if estado == "finalizado":
+        pedido.fecha_finalizacion = pedido.fecha_finalizacion or timezone.now()
+    pedido.save(update_fields=["estado_pedido", "fecha_finalizacion"])
+
+    payload = _pedido_takeout_payload(pedido)
+    registrar_movimiento(request, f"Pedido para llevar {pedido.id_pedido} actualizado a estado {estado}.")
+    emitir_evento_operacion("pedido_actualizado", payload)
+    return JsonResponse(payload)
+
+
+@csrf_exempt
+def api_takeout_confirmar_pago(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"error": "Metodo no permitido"}, status=405)
+
+    usuario = _usuario_desde_sesion(request)
+    if not usuario or not _es_operativo(usuario):
+        return JsonResponse({"error": "No autorizado"}, status=403)
+
+    pedido = _pedido_takeout(pk)
+    if not pedido:
+        return JsonResponse({"error": "Pedido para llevar no encontrado"}, status=404)
+
+    solicitud = (
+        SolicitudPago.objects.select_related("id_pedido", "id_usuario", "atendido_por")
+        .filter(id_pedido=pedido)
+        .exclude(estado="finalizada")
+        .order_by("-fecha_creacion")
+        .first()
+    )
+    if not solicitud:
+        return JsonResponse({"error": "El pedido no tiene una solicitud de pago activa"}, status=404)
+
+    try:
+        solicitud = _pago_service.actualizar_estado(solicitud.id_solicitud_pago, "finalizada", mesero=usuario)
+    except Exception as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    registrar_movimiento(request, f"Pago confirmado para pedido para llevar {pedido.id_pedido}.")
+    pedido.refresh_from_db()
+    return JsonResponse(
+        {
+            "pedido": _pedido_takeout_payload(pedido),
+            "solicitud": _pago_service.solicitud_to_dict(solicitud) if solicitud else None,
+        }
+    )
 
 
 @csrf_exempt

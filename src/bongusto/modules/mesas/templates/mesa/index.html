@@ -528,7 +528,15 @@
   }
 
   function _pedidoEstadoEndpoint(pedidoId) {
-    return `/api/pedidos/${pedidoId}/estado`;
+    return `/mesas/pedidos/${pedidoId}/estado`;
+  }
+
+  function _pedidoDetalleEndpoint(pedidoId) {
+    return `/mesas/pedidos/${pedidoId}`;
+  }
+
+  function _pedidoConfirmarPagoEndpoint(pedidoId) {
+    return `/mesas/pedidos/${pedidoId}/confirmar-pago`;
   }
 
   async function readJsonResponse(response) {
@@ -547,27 +555,23 @@
     const live = document.getElementById("liveStatus");
     try {
       if (accion === "ver") {
-        window.open(`/api/pedidos/${pedidoId}`, "_blank", "noopener,noreferrer");
+        window.open(_pedidoDetalleEndpoint(pedidoId), "_blank", "noopener,noreferrer");
         return;
       }
       if (accion === "confirmar_pago") {
-        const pedido = (estado.pedidos_para_llevar || []).find((item) => Number(item.id_pedido) === Number(pedidoId));
-        if (pedido && pedido.pago && pedido.pago.id_solicitud_pago) {
-          const response = await fetch(`/api/pagos/solicitudes/${pedido.pago.id_solicitud_pago}/estado`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ estado: "finalizada" }),
-          });
-          const data = await readJsonResponse(response);
-          if (!response.ok) {
-            live.textContent = `Error al confirmar pago del pedido ${pedidoId}: ${data.error || "sin detalle"}`;
-            return;
-          }
-          syncSnapshotFromRest();
-          live.textContent = `Pago confirmado para pedido para llevar #${pedidoId}.`;
+        const response = await fetch(_pedidoConfirmarPagoEndpoint(pedidoId), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const data = await readJsonResponse(response);
+        if (!response.ok) {
+          live.textContent = `Error al confirmar pago del pedido ${pedidoId}: ${data.error || "sin detalle"}`;
           return;
         }
-        live.textContent = `El pedido #${pedidoId} no tiene una solicitud de pago activa.`;
+        applyEvent("pedido_actualizado", data.pedido || {});
+        await syncSnapshotFromRest();
+        live.textContent = `Pago confirmado para pedido para llevar #${pedidoId}.`;
         return;
       }
       const estado = accion === "preparacion"
