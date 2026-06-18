@@ -154,24 +154,39 @@ def _usuario_local_desarrollo(tipo_usuario):
     return None
 
 
-# Intenta resolver el usuario real o uno de desarrollo
-def _resolver_usuario_llamados(request, *, tipo_desarrollo=None):
+def _usuario_desde_sesion(request):
+    usuario_id = request.session.get("usuario_id")
+    if not usuario_id:
+        return None
+    return Usuario.objects.filter(pk=usuario_id, estado__iexact="activo").first()
+
+
+def _resolver_usuario_hibrido(request, *, tipo_desarrollo=None):
     usuario, _, error_response = resolver_usuario_api(request)
     if usuario:
         return usuario, None
+
+    usuario_sesion = _usuario_desde_sesion(request)
+    if usuario_sesion:
+        return usuario_sesion, None
 
     usuario_dev = _usuario_local_desarrollo(tipo_desarrollo)
     if usuario_dev:
         return usuario_dev, None
 
-    return None, error_response
+    return None, error_response or JsonResponse({"error": "Autenticacion requerida"}, status=401)
+
+
+# Intenta resolver el usuario real o uno de desarrollo
+def _resolver_usuario_llamados(request, *, tipo_desarrollo=None):
+    return _resolver_usuario_hibrido(request, tipo_desarrollo=tipo_desarrollo)
 
 
 # Esta vista sirve para listar pedidos o crear uno nuevo
 @csrf_exempt
 def listar_o_crear(request):
     if request.method == "GET":
-        usuario, error_response = _resolver_usuario_llamados(
+        usuario, error_response = _resolver_usuario_hibrido(
             request,
             tipo_desarrollo="mesero",
         )
@@ -233,7 +248,7 @@ def listar_o_crear(request):
 
 # Muestra el detalle de un pedido por id
 def detalle(request, pk):
-    usuario, error_response = _resolver_usuario_llamados(
+    usuario, error_response = _resolver_usuario_hibrido(
         request,
         tipo_desarrollo="mesero",
     )
@@ -253,7 +268,7 @@ def actualizar_estado_pedido(request, pk):
     if request.method != "POST":
         return JsonResponse({"error": "Metodo no permitido"}, status=405)
 
-    usuario, error_response = _resolver_usuario_llamados(
+    usuario, error_response = _resolver_usuario_hibrido(
         request,
         tipo_desarrollo="mesero",
     )
