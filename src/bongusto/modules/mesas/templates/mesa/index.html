@@ -531,6 +531,18 @@
     return `/api/pedidos/${pedidoId}/estado`;
   }
 
+  async function readJsonResponse(response) {
+    const raw = await response.text();
+    try {
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {
+        error: `Respuesta inesperada (${response.status}).`,
+        raw,
+      };
+    }
+  }
+
   async function accionPedidoParaLlevar(pedidoId, accion) {
     const live = document.getElementById("liveStatus");
     try {
@@ -546,7 +558,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ estado: "finalizada" }),
           });
-          const data = await response.json();
+          const data = await readJsonResponse(response);
           if (!response.ok) {
             live.textContent = `Error al confirmar pago del pedido ${pedidoId}: ${data.error || "sin detalle"}`;
             return;
@@ -570,15 +582,16 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ estado }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok) {
         live.textContent = `Error al actualizar pedido ${pedidoId}: ${data.error || "sin detalle"}`;
         return;
       }
       applyEvent("pedido_actualizado", data);
+      await syncSnapshotFromRest();
       live.textContent = `Pedido para llevar #${pedidoId} actualizado a ${estado.replaceAll("_", " ")}.`;
-    } catch (_) {
-      live.textContent = "No se pudo actualizar el pedido para llevar en este momento.";
+    } catch (error) {
+      live.textContent = `No se pudo actualizar el pedido para llevar: ${error}.`;
     }
   }
 
@@ -593,16 +606,17 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok) {
         live.textContent = `Error al actualizar mesa ${mesaId}: ${data.error || "sin detalle"}`;
         return;
       }
       const mesa = data.mesa || data;
       applyEvent("mesa_actualizada", mesa);
+      await syncSnapshotFromRest();
       live.textContent = `${mesaTitle(mesa)} actualizada con accion ${accion}.`;
-    } catch (_) {
-      live.textContent = "No se pudo actualizar la mesa en este momento.";
+    } catch (error) {
+      live.textContent = `No se pudo actualizar la mesa: ${error}.`;
     }
   }
 
@@ -673,6 +687,7 @@
     };
   }
 
+  window.accionPedidoParaLlevar = accionPedidoParaLlevar;
   window.accionMesa = accionMesa;
   window.limpiarCacheMesas = limpiarCacheMesas;
   applySnapshot({
