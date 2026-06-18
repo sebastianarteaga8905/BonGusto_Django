@@ -254,7 +254,7 @@ if REDIS_URL:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": _redis_location,
+            "LOCATION": REDIS_URL,
             "TIMEOUT": int(os.getenv("CACHE_DEFAULT_TIMEOUT_SECONDS", "300")),
             "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", "bongusto"),
         }
@@ -353,3 +353,4 @@ _default_api_token_ttl = 60 * 60 * 24 * 30 if DEBUG else 60 * 60 * 8
 API_TOKEN_TTL_SECONDS = int(
     os.getenv("API_TOKEN_TTL_SECONDS", str(_default_api_token_ttl))
 )
+
