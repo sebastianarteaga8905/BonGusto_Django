@@ -1,10 +1,16 @@
 # Aquí importamos "path"
 # Es lo que nos permite crear las rutas (URLs) del sistema.
-from django.urls import path
+from django.contrib.auth import views as django_auth_views
+from django.urls import path, reverse_lazy
 
 # Aquí importamos las vistas de cada módulo.
 # Cada módulo tiene su lógica y aquí solo las conectamos.
 from bongusto.modules.auth import views as auth_views
+from bongusto.modules.auth.forms import (
+    BonGustoPasswordResetForm,
+    BonGustoSetPasswordForm,
+    password_reset_token_generator,
+)
 from bongusto.modules.bitacora import views as bitacora_views
 from bongusto.modules.calificaciones import views as calificaciones_views
 from bongusto.modules.categorias import views as categorias_views
@@ -36,6 +42,43 @@ urlpatterns = [
 
     path("login", auth_views.login_view, name="login"),
     path("logout", auth_views.logout_view, name="logout"),
+    path(
+        "password-reset/",
+        django_auth_views.PasswordResetView.as_view(
+            form_class=BonGustoPasswordResetForm,
+            template_name="registration/password_reset_form.html",
+            email_template_name="registration/password_reset_email.txt",
+            html_email_template_name="registration/password_reset_email.html",
+            subject_template_name="registration/password_reset_subject.txt",
+            token_generator=password_reset_token_generator,
+            success_url=reverse_lazy("password_reset_done"),
+        ),
+        name="password_reset",
+    ),
+    path(
+        "password-reset/done/",
+        django_auth_views.PasswordResetDoneView.as_view(
+            template_name="registration/password_reset_done.html"
+        ),
+        name="password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        auth_views.BonGustoPasswordResetConfirmView.as_view(
+            form_class=BonGustoSetPasswordForm,
+            template_name="registration/password_reset_confirm.html",
+            token_generator=password_reset_token_generator,
+            success_url=reverse_lazy("password_reset_complete"),
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        django_auth_views.PasswordResetCompleteView.as_view(
+            template_name="registration/password_reset_complete.html"
+        ),
+        name="password_reset_complete",
+    ),
 
     # =========================
     # SALUD DEL SISTEMA / APIs GENERALES
@@ -91,7 +134,7 @@ urlpatterns = [
     # =========================
 
     path("password/email", auth_views.password_email, name="password_email"),
-    path("password/reset", auth_views.password_reset, name="password_reset"),
+    path("password/reset", auth_views.password_reset, name="password_reset_code"),
     path("restablecer-password", auth_views.restablecer_password_link, name="restablecer_password_link"),
     path("restablecer-password/", auth_views.restablecer_password_link),
     path("api/password/request-code", auth_views.api_password_request_code, name="api_password_request_code"),

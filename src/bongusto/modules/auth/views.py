@@ -12,10 +12,13 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.template.loader import render_to_string
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import never_cache
@@ -32,6 +35,17 @@ from bongusto.modules.shared.security import (
 # Desde aquí se apoya toda la parte lógica del login.
 _service = UsuarioService()
 logger = logging.getLogger(__name__)
+
+
+class BonGustoPasswordResetConfirmView(PasswordResetConfirmView):
+    """Adapta la confirmacion de reset al modelo Usuario del proyecto."""
+
+    def get_user(self, uidb64):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            return Usuario.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+            return None
 
 
 class AuthPageHelper:

@@ -10,6 +10,8 @@ RUTAS_PUBLICAS = (
     "/logout",
     "/healthz",
     "/password/",
+    "/password-reset",
+    "/reset/",
     "/api/",
     "/static/",
     "/favicon.ico",
