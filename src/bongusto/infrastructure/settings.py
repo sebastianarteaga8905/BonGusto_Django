@@ -341,7 +341,7 @@ SECURE_SSL_REDIRECT = env_bool(
 )
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_DELIVERY_PROVIDER = config("EMAIL_DELIVERY_PROVIDER", default="smtp").strip().lower()
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
@@ -355,8 +355,15 @@ if EMAIL_USE_TLS and EMAIL_USE_SSL:
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
-RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", DEFAULT_FROM_EMAIL).strip()
+RESEND_API_KEY = config("RESEND_API_KEY", default="").strip()
+RESEND_FROM_EMAIL = config("RESEND_FROM_EMAIL", default=DEFAULT_FROM_EMAIL).strip()
+if EMAIL_DELIVERY_PROVIDER == "resend":
+    EMAIL_BACKEND = "bongusto.modules.auth.email_backends.ResendEmailBackend"
+else:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND",
+        default="django.core.mail.backends.smtp.EmailBackend",
+    )
 
 PASSWORD_RESET_CODE_TTL_MINUTES = int(
     os.getenv("PASSWORD_RESET_CODE_TTL_MINUTES", "10")

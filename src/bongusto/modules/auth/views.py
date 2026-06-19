@@ -1,9 +1,6 @@
 """Vistas del módulo de autenticación con un flujo claro y fácil de entender."""
 
-import json
 import logging
-from urllib import error as urlerror
-from urllib import request as urlrequest
 from datetime import datetime, timedelta
 from email.mime.image import MIMEImage
 from pathlib import Path
@@ -241,51 +238,7 @@ class AuthPageHelper:
             / "img"
             / "logobongusto.png"
         )
-    def _enviar_correo_resend(self, email, subject, text_body, html_body):
-        api_key = (getattr(settings, "RESEND_API_KEY", "") or "").strip()
-        if not api_key:
-            raise RuntimeError("RESEND_API_KEY no esta configurada.")
-
-        from_email = (getattr(settings, "RESEND_FROM_EMAIL", "") or "").strip() or (
-            getattr(settings, "DEFAULT_FROM_EMAIL", "") or ""
-        ).strip()
-        if not from_email:
-            raise RuntimeError("RESEND_FROM_EMAIL o DEFAULT_FROM_EMAIL no estan configurados.")
-
-        payload = {
-            "from": from_email,
-            "to": [email],
-            "subject": subject,
-            "text": text_body,
-            "html": html_body,
-        }
-
-        req = urlrequest.Request(
-            "https://api.resend.com/emails",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-
-        try:
-            with urlrequest.urlopen(req, timeout=getattr(settings, "EMAIL_TIMEOUT", 20)) as response:
-                status_code = getattr(response, "status", 200)
-                response_body = response.read().decode("utf-8", errors="replace")
-        except urlerror.HTTPError as exc:
-            detalle = exc.read().decode("utf-8", errors="replace")
-            logger.exception("Resend rechazo el correo para %s", email)
-            raise RuntimeError(f"Resend respondio HTTP {exc.code}: {detalle}") from exc
-        except urlerror.URLError as exc:
-            logger.exception("No fue posible conectar con Resend para %s", email)
-            raise RuntimeError(f"No fue posible conectar con Resend: {exc.reason}") from exc
-
-        if status_code >= 400:
-            raise RuntimeError(f"Resend respondio HTTP {status_code}: {response_body}")
-
-    def _enviar_correo_smtp(self, email, subject, text_body, html_body):
+    def _enviar_correo_backend(self, email, subject, text_body, html_body):
         message = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
@@ -309,19 +262,13 @@ class AuthPageHelper:
         text_body = render_to_string("auth/password_reset_email.txt", context)
         html_body = render_to_string("auth/password_reset_email.html", context)
         subject = "BonGusto | Codigo de recuperacion de acceso"
-        if (getattr(settings, "RESEND_API_KEY", "") or "").strip():
-            self._enviar_correo_resend(email, subject, text_body, html_body)
-            return
-        self._enviar_correo_smtp(email, subject, text_body, html_body)
+        self._enviar_correo_backend(email, subject, text_body, html_body)
 
     def enviar_correo_enlace_recuperacion(self, email, context):
         text_body = render_to_string("auth/password_reset_link_email.txt", context)
         html_body = render_to_string("auth/password_reset_link_email.html", context)
         subject = "Recuperacion de contrasena - BonGusto"
-        if (getattr(settings, "RESEND_API_KEY", "") or "").strip():
-            self._enviar_correo_resend(email, subject, text_body, html_body)
-            return
-        self._enviar_correo_smtp(email, subject, text_body, html_body)
+        self._enviar_correo_backend(email, subject, text_body, html_body)
 
     def construir_url_recuperacion(self, request, token):
         if request is not None:

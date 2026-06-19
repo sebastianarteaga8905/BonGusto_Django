@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = "Envia un correo de prueba para validar SMTP."
+    help = "Envia un correo de prueba usando el backend configurado en Django."
 
     def add_arguments(self, parser):
         parser.add_argument("email", type=str)
@@ -22,7 +22,7 @@ class Command(BaseCommand):
             )
         except Exception as exc:
             raise CommandError(
-                f"Error enviando correo via SMTP: {exc.__class__.__name__}: {exc}"
+                f"Error enviando correo via backend Django: {exc.__class__.__name__}: {exc}"
             ) from exc
 
         self.stdout.write(
